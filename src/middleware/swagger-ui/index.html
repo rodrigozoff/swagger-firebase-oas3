@@ -1,0 +1,89 @@
+<!-- HTML for static distribution bundle build -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="swagger-ui.css">
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+        
+        body {
+            margin: 0;
+            background: #fafafa;
+        }
+    </style>
+    <script defer src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha256-4+XzXVhsDmqanXGHaHvgh1gMQKX40OUvDEBTu8JcmNs=" crossorigin="anonymous"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/ui/4.5.0/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.5.0/firebase-ui-auth.css" />
+    <style>
+        #firebaseui-auth-container {
+            position: absolute;
+            top: 150px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="swagger-ui"></div>
+    <div id="firebaseui-auth-container"></div>
+    <script src="swagger-ui-bundle.js">
+    </script>
+    <script src="swagger-ui-standalone-preset.js">
+    </script>
+    <script>
+        window.onload = function() {
+            function initSwaggerUi(url) {
+                window.ui = SwaggerUIBundle({
+                    url: url,
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: "StandaloneLayout",
+                    validatorUrl: null
+                });
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.open('HEAD', document.location.href);
+            xhr.onreadystatechange = function() {
+                var url = '../api-docs';
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    url = xhr.getResponseHeader('Swagger-API-Docs-URL');
+                } else {
+                    console.log('Unable to get the Swagger UI URL from the server (%s): %s', xhr.status, xhr.responseText);
+                }
+                initSwaggerUi(url);
+            };
+            xhr.send(null);
+        }
+    </script>
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script defer src="https://www.gstatic.com/firebasejs/7.14.5/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/7.14.5/firebase-auth.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/7.14.5/firebase-functions.js"></script>
+    <script defer src="./init-firebase.js"></script>
+</body>
+
+</html>
