@@ -66,11 +66,9 @@ export class ExpressAppConfig {
             var service = swaggerDoc.paths[pathService];
             for (const methodName in service) {
                 const method = service[methodName];
+              
                 let controllerName = method["x-swagger-router-controller"];
-                if (!controllerName && method.tags && method.tags.length == 1) {
-                    controllerName = method.tags[0];
-                    console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
-                }
+
                 if (!controllerName) {
                     throw Error(`El servicio ${pathService} con el metodo : ${methodName}  no posee controller. Falta atributo x-swagger-router-controller o un tag para inferirlo.`);
                 }
@@ -130,7 +128,8 @@ export class ExpressAppConfig {
             for (const methodName in service) {
                 delete swaggerDoc.paths[pathService];
                 const method = service[methodName];
-                const controllerName = method["x-swagger-router-controller"];
+                let controllerName = method["x-swagger-router-controller"];
+                method["x-swagger-router-controller"] = controllerName.charAt(0).toUpperCase() + controllerName.slice(1);
                 swaggerDoc.paths["/mod" + controllerName + pathService] = service;
                 break;
             }
@@ -141,7 +140,6 @@ export class ExpressAppConfig {
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(express.text());
         this.app.use(express.json());
-
 
         this.app.use(this.configureLogger(appOptions.logging));
         this.app.use(express.json());

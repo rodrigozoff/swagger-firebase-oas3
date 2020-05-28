@@ -5,4 +5,4 @@ Implementación de Swagger tools (SwaggerUI / Swagger Route / express-openapi-va
 - Se despliega una sola UI de Swagger.
 - La UI Swagger implementa Firebase Authentication.
 
-Este proyecto es fork de https://github.com/bug-hunters/oas3-tools
+Este proyecto esta basado en el proyecto https://github.com/bug-hunters/oas3-tools

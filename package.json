@@ -1,6 +1,6 @@
 {
-    "name": "swagger-firebase-oas3",
-    "version": "1.0.0",
+    "name": "@zoff-tech/swagger-firebase-oas3",
+    "version": "1.0.1",
     "description": "Implementación de SwaggerUI / Swagger Route sobre Firebase Cloud Functions / Athentication",
     "main": "dist/index.js",
     "scripts": {
