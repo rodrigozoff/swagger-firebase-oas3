@@ -69,6 +69,11 @@ export class ExpressAppConfig {
               
                 let controllerName = method["x-swagger-router-controller"];
 
+                if (!controllerName && method.tags && method.tags.length == 1) {
+                    controllerName = method.tags[0];
+                    console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
+                }
+
                 if (!controllerName) {
                     throw Error(`El servicio ${pathService} con el metodo : ${methodName}  no posee controller. Falta atributo x-swagger-router-controller o un tag para inferirlo.`);
                 }
