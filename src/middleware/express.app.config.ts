@@ -45,7 +45,7 @@ export class AppController {
 export interface IAppOptions {
     logging?: string;
     routing: any;
-    publicFolderPath:string;
+    publicFolderPath: string;
     callBackInitModules?: (app: express.Application, name: string, pathController: string) => void;
 }
 
@@ -55,119 +55,126 @@ export class ExpressAppConfig {
     private routingOptions;
 
     constructor(definitionPath: string, appOptions: IAppOptions) {
-        this.routingOptions = appOptions.routing;
-        this.app = express();
+        try {
 
-        const spec = fs.readFileSync(definitionPath, 'utf8');
-        const swaggerDoc = jsyaml.safeLoad(spec);
+            this.routingOptions = appOptions.routing;
+            this.app = express();
 
-        //----------------------------------------------------
-        for (var pathService in swaggerDoc.paths) {
-            var service = swaggerDoc.paths[pathService];
-            for (const methodName in service) {
-                const method = service[methodName];
-              
-                let controllerName = method["x-swagger-router-controller"];
+            const spec = fs.readFileSync(definitionPath, 'utf8');
+            const swaggerDoc = jsyaml.safeLoad(spec);
 
-                if (!controllerName && method.tags && method.tags.length == 1) {
-                    controllerName = method.tags[0];
-                    console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
-                }
+            //----------------------------------------------------
+            for (var pathService in swaggerDoc.paths) {
+                var service = swaggerDoc.paths[pathService];
+                for (const methodName in service) {
+                    const method = service[methodName];
 
-                if (!controllerName) {
-                    throw Error(`El servicio ${pathService} con el metodo : ${methodName}  no posee controller. Falta atributo x-swagger-router-controller o un tag para inferirlo.`);
-                }
+                    let controllerName = method["x-swagger-router-controller"];
 
-                method["x-swagger-router-controller"] = controllerName.charAt(0).toUpperCase() + controllerName.slice(1);
+                    if (!controllerName && method.tags && method.tags.length == 1) {
+                        controllerName = method.tags[0];
+                        console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
+                    }
 
-                if (!this.appControllers.find(i => i.name === controllerName)) {
-                    let appController = new AppController();
-                    appController.name = controllerName;
-                    this.appControllers.push(appController);
-                    appController.app = express();
-                    appController.callBackInitModule = appOptions.callBackInitModules;
-                    this.agregarMiddlewareAppCloudFunction(appController.app, appOptions);
-                }
-            }
-        }
+                    if (!controllerName) {
+                        throw Error(`El servicio ${pathService} con el metodo : ${methodName}  no posee controller. Falta atributo x-swagger-router-controller o un tag para inferirlo.`);
+                    }
 
-        this.appControllers.forEach(appController => {
-            const appName = appController.name;
-            var sdoc = JSON.parse(JSON.stringify(swaggerDoc));
+                    method["x-swagger-router-controller"] = controllerName.charAt(0).toUpperCase() + controllerName.slice(1);
 
-            // Se eliminan las tags no utilizadas
-            var newTags = [];
-            for (let index = 0; index < sdoc.tags.length; index++) {
-                const tag = sdoc.tags[index];
-                if (tag.name == appName.toLowerCase()) {
-                    newTags.push(tag);
+                    if (!this.appControllers.find(i => i.name === controllerName)) {
+                        let appController = new AppController();
+                        appController.name = controllerName;
+                        this.appControllers.push(appController);
+                        appController.app = express();
+                        appController.callBackInitModule = appOptions.callBackInitModules;
+                        this.agregarMiddlewareAppCloudFunction(appController.app, appOptions);
+                    }
                 }
             }
 
-            sdoc.tags = newTags;
+            this.appControllers.forEach(appController => {
+                const appName = appController.name;
+                var sdoc = JSON.parse(JSON.stringify(swaggerDoc));
+          
+                var newTags = [];
 
-            sdoc.servers.forEach(server => {
-                var q = url.parse(server.url, true);
-                server.url = q.pathname + "/mod" + appName;
+                if (sdoc.tags && sdoc.tags.length > 0) {
+                    // Se eliminan las tags no utilizadas            
+                    for (let index = 0; index < sdoc.tags.length; index++) {
+                        const tag = sdoc.tags[index];
+                        if (tag.name == appName.toLowerCase()) {
+                            newTags.push(tag);
+                        }
+                    }
+                } else {
+                    newTags.push(appName.toLowerCase());
+                }
+
+                sdoc.tags = newTags;
+
+                sdoc.servers.forEach(server => {
+                    var q = url.parse(server.url, true);
+                    server.url = q.pathname + "/mod" + appName;
+                });
+
+                const rootPath = "/" + appName.toLowerCase();
+                for (var pathService in sdoc.paths) {
+                    const service = sdoc.paths[pathService];
+                    delete sdoc.paths[pathService];
+                    if (pathService.indexOf(rootPath + "/") == 0 ||
+                        pathService == rootPath
+                    ) {
+                        sdoc.paths[pathService] = service;
+                    }
+                }
+
+                appController.pathController = "mod" + appController.name;
+                appController.swaggerDoc = sdoc;
+                appController.addValidator(this.routingOptions)
+
             });
 
-            const rootPath = "/" + appName.toLowerCase();
-            for (var pathService in sdoc.paths) {
-                const service = sdoc.paths[pathService];
-                delete sdoc.paths[pathService];
-                if (pathService.indexOf(rootPath + "/") == 0 ||
-                    pathService == rootPath
-                ) {
-                    sdoc.paths[pathService] = service;
+            for (var pathService in swaggerDoc.paths) {
+                var service = swaggerDoc.paths[pathService];
+                for (const methodName in service) {
+                    delete swaggerDoc.paths[pathService];
+                    const method = service[methodName];
+                    let controllerName = method["x-swagger-router-controller"];
+                    if (!controllerName && method.tags && method.tags.length == 1) {
+                        controllerName = method.tags[0];
+                        console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
+                    }
+                    method["x-swagger-router-controller"] = controllerName.charAt(0).toUpperCase() + controllerName.slice(1);
+                    swaggerDoc.paths["/mod" + controllerName + pathService] = service;
+                    break;
                 }
             }
 
-            appController.pathController = "mod" + appController.name;
-            appController.swaggerDoc = sdoc;
-            appController.addValidator(this.routingOptions)
+            //----------------------------------------------------
 
-        });
+            this.app.use(this.configureLogger(appOptions.logging));
+            this.app.use(express.text());
+            this.app.use(express.json());
+            this.app.use(express.urlencoded({ extended: false }));
+            this.app.use(cookieParser());
 
-        for (var pathService in swaggerDoc.paths) {
-            var service = swaggerDoc.paths[pathService];
-            for (const methodName in service) {
-                delete swaggerDoc.paths[pathService];
-                const method = service[methodName];
-                let controllerName = method["x-swagger-router-controller"];
-                if (!controllerName && method.tags && method.tags.length == 1) {
-                    controllerName = method.tags[0];
-                    console.log(`En el servicio ${pathService} sobre el metodo : ${methodName} - Se infirio el nombre del controller ${controllerName.charAt(0).toUpperCase() + controllerName.slice(1)} por nombre de tag.`)
-                }
-                method["x-swagger-router-controller"] = controllerName.charAt(0).toUpperCase() + controllerName.slice(1);
-                swaggerDoc.paths["/mod" + controllerName + pathService] = service;
-                break;
-            }
+            const swaggerUi = new SwaggerUI(swaggerDoc, undefined);
+            this.app.use(swaggerUi.serveStaticContent());
+
+            this.app.use(express.static(appOptions.publicFolderPath));
+
+        } catch (error) {
+            console.log("swagger-firebase-oas3 / Error in ExpressAppConfig Constructor / Check OAS3 Definition")
+            console.error(error);
+
         }
-
-        //----------------------------------------------------
-  
-        this.app.use(express.urlencoded({ extended: true }));
-        this.app.use(express.text());
-        this.app.use(express.json());
-
-        this.app.use(this.configureLogger(appOptions.logging));
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: false }));
-        this.app.use(cookieParser());
-
-        const swaggerUi = new SwaggerUI(swaggerDoc, undefined);
-        this.app.use(swaggerUi.serveStaticContent());
-
-        this.app.use(express.static(appOptions.publicFolderPath));
     }
 
     private agregarMiddlewareAppCloudFunction(app: express.Application, appOptions) {
 
-        app.use(express.urlencoded({ extended: true }));
-        app.use(express.text());
-        app.use(express.json());
-
         app.use(this.configureLogger(appOptions.logging));
+        app.use(express.text());
         app.use(express.json());
         app.use(express.urlencoded({ extended: false }));
         app.use(cookieParser());
